@@ -1,0 +1,4 @@
+SECRET_KEY = "asdf78wr239293r239r3yethfjksdf923478724029ry834rr28343"
+IP = "0.0.0.0"
+PORT = "5000"
+DEBUG = True
