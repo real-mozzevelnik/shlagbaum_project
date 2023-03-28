@@ -65,3 +65,60 @@ class Database():
 
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
+        
+    
+    # Метод для добавления гостя.
+    def create_guest(self, token, guest_name, car_num):
+        try:
+            # Пытаемся декодировать токен.
+            user_data = decode_token(token)
+            # Если не получилось - возвращаем ошибку.
+            if not user_data:
+                return {'error' : 'Не валидный токен'}
+            
+            # Проверяем наличие номера авто в таблице гостей.
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Guests WHERE car_num = '{car_num}'")
+            res = self.__cur.fetchone()
+            # Проверяем наличие номера авто в таблице пользователей.
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE car_num = '{car_num}'")
+            res2 = self.__cur.fetchone()
+            # Если нашлось авто с таким номером - возвращаем ошибку.
+            if res['count'] or res2['count']:
+                return {'error' : 'Авто уже зарегистрировано.'}
+            
+            # Добавляем данные в бд.
+            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id) 
+                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}')""")
+            self.__db.commit()
+            return {}
+            
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        
+
+    # Метод для изменения данных о пользователе в бд.
+    def update_user(self, token, param, new_stat):
+        try:
+            # Декодируем токен.
+            user_data = decode_token(token)
+            if not user_data:
+                return {'error' : 'Не валидный токен.'}
+            
+            # Обновлем данные.
+            self.__cur.execute(f"""UPDATE Users SET {param} = '{new_stat}' WHERE user_id = '{user_data["user_id"]}'""")
+            self.__db.commit()
+            
+            # Получаем данные из бд для создания нового токена.
+            self.__cur.execute(f"SELECT mail, name, lastname, car_num FROM Users WHERE user_id = '{user_data['user_id']}'")
+            res = self.__cur.fetchone()
+
+            # Возвращаем новые данные в токене.
+            access_token = generate_token(user_data['user_id'], res['mail'], res['name'], res['lastname'], res['car_num'])
+
+            return {"token" : access_token}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase error'}
+        
+
+    

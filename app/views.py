@@ -56,3 +56,34 @@ def registr():
                                 content['name'], content['lastname'], content['car_num'])
 
     return jsonify(res)
+
+
+# Добавление гостя.
+@app.route("/add_guest", methods = ["POST"])
+def add_guest():
+    content = request.json
+    res = dbase.create_guest(content['token'], content['guest_name'], content['car_num'])
+
+    return jsonify(res)
+
+
+# Изменения информации и пользователе.
+@app.route("/change_user", methods = ["POST"])
+def change_user():
+    content = request.json
+    res = dbase.update_user(content["token"], content["param"], content["new_stat"])
+
+    return jsonify(res)
+
+
+# Удаление пользователя.
+@app.route("/del_user", methods = ["POST"])
+def del_user():
+    content = request.json
+    pass
+
+
+@app.route("/call", methods = ["POST"])
+def call():
+    content = request.json
+    return 1
