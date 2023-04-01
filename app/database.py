@@ -37,7 +37,7 @@ class Database():
             self.__cur.execute(f"SELECT user_id FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             access_token = generate_token(res['user_id'], phone, name, lastname, car_num)
-            return {'access_token' : access_token}
+            return {'token' : access_token}
 
         # Обрабатываем возможные исключения.
         except NumberParseException:
@@ -68,7 +68,7 @@ class Database():
 
             # Проверяем пароль и возвращаем данные в токене.
             access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], res['car_num'])
-            return {'access_token' : access_token} if check_password_hash(res['password'], password) else {'error' : 'Неверный пароль.'}
+            return {'token' : access_token} if check_password_hash(res['password'], password) else {'error' : 'Неверный пароль.'}
 
         except NumberParseException:
             return {'error' : 'Не валидный номер телефона.'}
