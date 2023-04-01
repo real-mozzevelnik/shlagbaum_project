@@ -4,9 +4,9 @@ from datetime import datetime, timedelta
 
 
 # Создаем jwt токен, в котором будут храниться:
-# user_id, mail, name, lastname, car_num, exp.
-def generate_token(user_id, mail, name, last_name, car_num):
-    token = jwt.encode({"user_id" : user_id, "mail" : mail,
+# user_id, phone, name, lastname, car_num, exp.
+def generate_token(user_id, phone, name, last_name, car_num):
+    token = jwt.encode({"user_id" : user_id, "phone" : phone,
     "name" : name, "last_name" : last_name, "car_num" : car_num, "exp": datetime.utcnow() + timedelta(days=30)}, 
     app.config['SECRET_KEY'], algorithm = "HS256")
     return token

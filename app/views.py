@@ -42,7 +42,7 @@ def close_db(error):
 @app.route('/login', methods = ["POST"])
 def login():
     content = request.json
-    res = dbase.retrieve_user(content['mail'] ,content['password'])
+    res = dbase.retrieve_user(content['phone'] ,content['password'])
 
     return jsonify(res)
 
@@ -52,7 +52,7 @@ def login():
 def registr():
     content = request.json
     hash = generate_password_hash(content['password'])
-    res = dbase.create_user(content['mail'], hash, 
+    res = dbase.create_user(content['phone'], hash, 
                                 content['name'], content['lastname'], content['car_num'])
 
     return jsonify(res)
@@ -80,7 +80,9 @@ def change_user():
 @app.route("/del_user", methods = ["POST"])
 def del_user():
     content = request.json
-    pass
+    res = dbase.delete_user(content["token"])
+
+    return jsonify(res)
 
 
 @app.route("/call", methods = ["POST"])

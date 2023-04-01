@@ -1,6 +1,6 @@
 import sqlite3
 from werkzeug.security import check_password_hash
-from email_validator import validate_email, EmailNotValidError
+from phonenumbers import is_valid_number
 
 from app.token import generate_token, decode_token
 
@@ -12,34 +12,33 @@ class Database():
 
 
     # Метод для создания аккаунта пользователя.
-    # Проверяет, существует ли уже пользователь с данной почтой.
+    # Проверяет, существует ли уже пользователь с данным номером телефона.
     # Пароли хранятся в базе данных в виде хэша.
     # Возвращает jwt токен.
-    def create_user(self, mail, hpsw, name, lastname, car_num):
+    def create_user(self, phone, hpsw, name, lastname, car_num):
         try:
-            # Проверяем, валидна ли почта.
-            # Если нет - вызовется исключение, обработанное ниже (EmailNotValidError).
-            validate_email(mail)
+            # Проверяем, валиден ли номер телефона.
+            # Если нет - возвращаем ошибку.
+            if not is_valid_number(phone):
+                return {'error' : 'Не валидный номер телефона.'}
             # Проверяем, существует ли уже юзер с такой почтой.
-            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE mail = '{mail}'")
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             if res['count'] > 0:
                 return {'error' : 'Пользователь с такой почтой уже зарегистрирован.'}
             
             # Создаем нового юзера в базе данных.
-            self.__cur.execute(f"""INSERT INTO Users (name, lastname, mail, password, car_num) 
-                               VALUES('{name}', '{lastname}', '{mail}', '{hpsw}', '{car_num}')""")
+            self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, password, car_num) 
+                               VALUES('{name}', '{lastname}', '{phone}', '{hpsw}', '{car_num}')""")
             self.__db.commit()
 
             # Запрашиваем в дб id юзера, чтобы добавить его в токен.
-            self.__cur.execute(f"SELECT user_id FROM Users WHERE mail = '{mail}'")
+            self.__cur.execute(f"SELECT user_id FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
-            access_token = generate_token(res['user_id'], mail, name, lastname, car_num)
+            access_token = generate_token(res['user_id'], phone, name, lastname, car_num)
             return {'access_token' : access_token}
 
         # Обрабатываем возможные исключения.
-        except EmailNotValidError:
-            return {'error' : 'Не валидная почта.'}
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
 
@@ -47,20 +46,24 @@ class Database():
     # Метод для входа в аккаунт.
     # Проверяет, существует ли юзер с данной почтой. 
     # Возвращает данные о юзере в токене.
-    def retrieve_user(self, mail, password):
+    def retrieve_user(self, phone, password):
         try:
-            # Проверяем, существует ли пользователь с такой почтой.
-            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE mail = '{mail}'")
+            # Проверяем, валиден ли номер телефона.
+            # Если нет - возвращаем ошибку.
+            if not is_valid_number(phone):
+                return {'error' : 'Не валидный номер телефона.'}
+            # Проверяем, существует ли пользователь с таким номером телефона.
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             if res['count'] != 1:
                 return {'error' : 'Аккаунта не существует.'}
             
             # Получаем данные из бд.
-            self.__cur.execute(f"SELECT user_id, name, lastname, car_num, password FROM Users WHERE mail = '{mail}'")
+            self.__cur.execute(f"SELECT user_id, name, lastname, car_num, password FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
 
             # Проверяем пароль и возвращаем данные в токене.
-            access_token = generate_token(res['user_id'], mail, res['name'], res['lastname'], res['car_num'])
+            access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], res['car_num'])
             return {'access_token' : access_token} if check_password_hash(res['password'], password) else {'error' : 'Неверный пароль.'}
 
         except sqlite3.Error:
@@ -109,13 +112,22 @@ class Database():
             self.__db.commit()
             
             # Получаем данные из бд для создания нового токена.
-            self.__cur.execute(f"SELECT mail, name, lastname, car_num FROM Users WHERE user_id = '{user_data['user_id']}'")
+            self.__cur.execute(f"SELECT phone, name, lastname, car_num FROM Users WHERE user_id = '{user_data['user_id']}'")
             res = self.__cur.fetchone()
 
             # Возвращаем новые данные в токене.
-            access_token = generate_token(user_data['user_id'], res['mail'], res['name'], res['lastname'], res['car_num'])
+            access_token = generate_token(user_data['user_id'], res['phone'], res['name'], res['lastname'], res['car_num'])
 
             return {"token" : access_token}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase error'}
+        
+
+    def delete_user(self, token):
+        try:
+            # uset_data = 
+            pass
 
         except sqlite3.Error:
             return {'error' : 'DataBase error'}
