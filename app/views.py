@@ -62,7 +62,8 @@ def registr():
 @app.route("/add_guest", methods = ["POST"])
 def add_guest():
     content = request.json
-    res = dbase.create_guest(content['token'], content['guest_name'], content['car_num'])
+    res = dbase.create_guest(content['token'], content['guest_name'], 
+                             content['car_num'], content['one_time_visit'])
 
     return jsonify(res)
 

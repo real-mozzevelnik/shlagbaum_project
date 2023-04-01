@@ -1,6 +1,6 @@
 import sqlite3
 from werkzeug.security import check_password_hash
-from phonenumbers import is_valid_number
+from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
 
@@ -18,9 +18,10 @@ class Database():
     def create_user(self, phone, hpsw, name, lastname, car_num):
         try:
             # Проверяем, валиден ли номер телефона.
-            # Если нет - возвращаем ошибку.
-            if not is_valid_number(phone):
-                return {'error' : 'Не валидный номер телефона.'}
+            # Если нет - возвращаем ошибку, обрабатывая исключение NumberParseException.
+            s = parse(phone)
+            if not is_valid_number(s):
+                raise NumberParseException(0, 'Not valid ph')
             # Проверяем, существует ли уже юзер с такой почтой.
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
@@ -39,6 +40,8 @@ class Database():
             return {'access_token' : access_token}
 
         # Обрабатываем возможные исключения.
+        except NumberParseException:
+            return {'error' : 'Не валидный номер телефона.'}
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
 
@@ -49,9 +52,10 @@ class Database():
     def retrieve_user(self, phone, password):
         try:
             # Проверяем, валиден ли номер телефона.
-            # Если нет - возвращаем ошибку.
-            if not is_valid_number(phone):
-                return {'error' : 'Не валидный номер телефона.'}
+            # Если нет - возвращаем ошибку, обрабатывая исключение NumberParseException.
+            s = parse(phone)
+            if not is_valid_number(s):
+                raise NumberParseException(0, 'Not valid ph')
             # Проверяем, существует ли пользователь с таким номером телефона.
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
@@ -66,12 +70,14 @@ class Database():
             access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], res['car_num'])
             return {'access_token' : access_token} if check_password_hash(res['password'], password) else {'error' : 'Неверный пароль.'}
 
+        except NumberParseException:
+            return {'error' : 'Не валидный номер телефона.'}
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
         
     
     # Метод для добавления гостя.
-    def create_guest(self, token, guest_name, car_num):
+    def create_guest(self, token, guest_name, car_num, one_time_visit):
         try:
             # Пытаемся декодировать токен.
             user_data = decode_token(token)
@@ -89,9 +95,11 @@ class Database():
             if res['count'] or res2['count']:
                 return {'error' : 'Авто уже зарегистрировано.'}
             
+            visits = 2 if one_time_visit else -1
+
             # Добавляем данные в бд.
-            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id) 
-                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}')""")
+            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id, visits_available) 
+                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}', '{visits}')""")
             self.__db.commit()
             return {}
             
