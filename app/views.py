@@ -86,6 +86,15 @@ def del_user():
     return jsonify(res)
 
 
+@app.route("/change_guest", methods = ["POST"])
+def change_guest():
+    content = request.json
+    res = dbase.update_user(content["token"], content["guest_car_num"], 
+                            content["param"], content["new_stat"])
+    
+    return jsonify(res)
+
+
 @app.route("/call", methods = ["POST"])
 def call():
     content = request.json

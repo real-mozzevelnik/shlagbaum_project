@@ -3,7 +3,7 @@ from werkzeug.security import check_password_hash
 from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
-from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException
+from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException, NotYourCarException
 
 # Класс для взаимодействия с базой данных.
 class Database():
@@ -145,11 +145,44 @@ class Database():
 
     def delete_user(self, token):
         try:
-            # uset_data = 
-            pass
+            # Декодируем токен.
+            user_data = decode_token(token)
+            
+            # Удаляем гостей пользователя.
+            self.__cur.execute(f"""DELETE FROM Guests where user_id = '{user_data['user_id']}'""")
+            # Удаляем самого пользователя.
+            self.__cur.execute(f"""DELETE FROM Users where user_id = '{user_data['user_id']}'""")
+            self.__db.commit()
+
+            return {}
 
         except sqlite3.Error:
             return {'error' : 'DataBase error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
         
 
+    def update_guest(self, token, guest_car_num, param, new_stat):
+        try:
+            # Декодируем токен.
+            user_data = decode_token(token)
+            # Проверяем, существует ли в бд тс с таким номером, и принадлежит ли оно к данному пользователю.
+            self.__cur.execute(f"SELECT user_id FROM Guests WHERE car_num = '{guest_car_num}'")
+            res = self.__cur.fetchone()
+            # Если нет - вызываем исключение.
+            if not res or user_data['user_id'] != res['user_id']:
+                raise NotYourCarException
+            
+            # Обновлем данные.
+            self.__cur.execute(f"""UPDATE Guests SET {param} = '{new_stat}' WHERE car_num = '{guest_car_num}'""")
+            self.__db.commit()
+
+            return {}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
+        except NotYourCarException:
+            return {'error' : 'Данное тс не является для вас гостевым.'}
     

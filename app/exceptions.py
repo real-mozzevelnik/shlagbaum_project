@@ -21,3 +21,10 @@ class UserDoesntExistsExceptoin(Exception):
 class CarNumAlreadyExistsException(Exception):
     """Вызывается при регистрации нового гостевого тс, 
     если тс с таким номером уже зарегистрировано."""
+    pass
+
+
+class NotYourCarException(Exception):
+    """Вызывается в случае, когда пользователь пытается изменить информацию
+    не о своем тс."""
+    pass
