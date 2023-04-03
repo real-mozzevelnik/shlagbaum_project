@@ -3,6 +3,7 @@ from werkzeug.security import check_password_hash
 from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
+from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException
 
 # Класс для взаимодействия с базой данных.
 class Database():
@@ -26,7 +27,7 @@ class Database():
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             if res['count'] > 0:
-                return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
+                raise UserAlreadyExistsException
             
             # Создаем нового юзера в базе данных.
             self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, password, car_num) 
@@ -44,6 +45,8 @@ class Database():
             return {'error' : 'Не валидный номер телефона.'}
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
+        except UserAlreadyExistsException:
+            return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
 
 
     # Метод для входа в аккаунт.
@@ -60,7 +63,7 @@ class Database():
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             if res['count'] != 1:
-                return {'error' : 'Аккаунта не существует.'}
+                raise UserDoesntExistsExceptoin
             
             # Получаем данные из бд.
             self.__cur.execute(f"SELECT user_id, name, lastname, car_num, password FROM Users WHERE phone = '{phone}'")
@@ -68,12 +71,19 @@ class Database():
 
             # Проверяем пароль и возвращаем данные в токене.
             access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], res['car_num'])
-            return {'token' : access_token} if check_password_hash(res['password'], password) else {'error' : 'Неверный пароль.'}
+            if check_password_hash(res['password'], password):
+                return {'token' : access_token} 
+            else:
+                raise WrongPasswordException
 
         except NumberParseException:
             return {'error' : 'Не валидный номер телефона.'}
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
+        except UserDoesntExistsExceptoin:
+            return {'error' : 'Аккаунта не существует.'}
+        except WrongPasswordException:
+            return {'error' : 'Неверный пароль.'}
         
     
     # Метод для добавления гостя.
@@ -81,9 +91,6 @@ class Database():
         try:
             # Пытаемся декодировать токен.
             user_data = decode_token(token)
-            # Если не получилось - возвращаем ошибку.
-            if not user_data:
-                return {'error' : 'Не валидный токен'}
             
             # Проверяем наличие номера авто в таблице гостей.
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Guests WHERE car_num = '{car_num}'")
@@ -93,7 +100,7 @@ class Database():
             res2 = self.__cur.fetchone()
             # Если нашлось авто с таким номером - возвращаем ошибку.
             if res['count'] or res2['count']:
-                return {'error' : 'Авто уже зарегистрировано.'}
+                raise CarNumAlreadyExistsException
             
             visits = 2 if one_time_visit else -1
 
@@ -105,6 +112,10 @@ class Database():
             
         except sqlite3.Error:
             return {'error' : 'DataBase Error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен'}
+        except CarNumAlreadyExistsException:
+            return {'error' : 'Авто уже зарегистрировано.'}
         
 
     # Метод для изменения данных о пользователе в бд.
@@ -112,8 +123,6 @@ class Database():
         try:
             # Декодируем токен.
             user_data = decode_token(token)
-            if not user_data:
-                return {'error' : 'Не валидный токен.'}
             
             # Обновлем данные.
             self.__cur.execute(f"""UPDATE Users SET {param} = '{new_stat}' WHERE user_id = '{user_data["user_id"]}'""")
@@ -130,6 +139,8 @@ class Database():
 
         except sqlite3.Error:
             return {'error' : 'DataBase error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
         
 
     def delete_user(self, token):

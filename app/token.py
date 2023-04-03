@@ -1,6 +1,7 @@
 from app import app
 import jwt
 from datetime import datetime, timedelta
+from exceptions import InvalidTokenException
 
 
 # Создаем jwt токен, в котором будут храниться:
@@ -13,9 +14,9 @@ def generate_token(user_id, phone, name, last_name, car_num):
 
 # Декодируем jwt токен.
 # Если декодировать получилось - возвращаем данные из токена в виде словаря.
-# Если декодировать не получилось - возвращаем None
+# Если декодировать не получилось - вызываем ошибку.
 def decode_token(token):
     try:
         return jwt.decode(token, app.config['SECRET_KEY'], algorithms = "HS256")
     except:
-        return None
+        raise InvalidTokenException
