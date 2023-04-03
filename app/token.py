@@ -1,7 +1,7 @@
 from app import app
 import jwt
 from datetime import datetime, timedelta
-from exceptions import InvalidTokenException
+from app.exceptions import InvalidTokenException
 
 
 # Создаем jwt токен, в котором будут храниться:
