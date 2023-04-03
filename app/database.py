@@ -22,11 +22,11 @@ class Database():
             s = parse(phone)
             if not is_valid_number(s):
                 raise NumberParseException(0, 'Not valid ph')
-            # Проверяем, существует ли уже юзер с такой почтой.
+            # Проверяем, существует ли уже юзер с таким номером телефона.
             self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
             if res['count'] > 0:
-                return {'error' : 'Пользователь с такой почтой уже зарегистрирован.'}
+                return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
             
             # Создаем нового юзера в базе данных.
             self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, password, car_num) 
