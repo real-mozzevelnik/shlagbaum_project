@@ -72,7 +72,7 @@ def add_guest():
 @app.route("/change_user", methods = ["POST"])
 def change_user():
     content = request.json
-    res = dbase.update_user(content["token"], content["param"], content["new_stat"])
+    res = dbase.update_user(content["token"], content["changes"])
 
     return jsonify(res)
 
@@ -86,12 +86,49 @@ def del_user():
     return jsonify(res)
 
 
+# Удаление гостя.
+@app.route("/del_guest", methods = ["POST"])
+def del_guest():
+    content = request.json
+    res = dbase.delete_guest(content["token"], content["guest_id"])
+
+    return jsonify(res)
+
+
+# Изменение информации о госте.
 @app.route("/change_guest", methods = ["POST"])
 def change_guest():
     content = request.json
-    res = dbase.update_user(content["token"], content["guest_car_num"], 
-                            content["param"], content["new_stat"])
+    res = dbase.update_guest(content["token"], content["guest_id"], 
+                            content["changes"])
     
+    return jsonify(res)
+
+
+# Проверка существования пользователя.
+@app.route("/check_user", methods = ["POST"])
+def check_user_existance():
+    content = request.json
+    res = dbase.does_user_exists(content["token"])
+
+    return jsonify(res)
+
+
+# Изменение пароля пользователя.
+@app.route("/change_password", methods = ["POST"])
+def change_psw():
+    content = request.json
+    res = dbase.change_password(content["token"], content["old_psw"], content["new_psw"])
+
+    return jsonify(res)
+
+
+# Получение всех гостей конкретного пользователя.
+@app.route("/get_guests", methods = ["POST"])
+def get_guests():
+    content = request.json
+    res = dbase.retrieve_guests(content["token"])
+
     return jsonify(res)
 
 

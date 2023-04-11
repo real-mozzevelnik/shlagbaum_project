@@ -28,3 +28,8 @@ class NotYourCarException(Exception):
     """Вызывается в случае, когда пользователь пытается изменить информацию
     не о своем тс."""
     pass
+
+
+class NotYourGuestException(Exception):
+    """Вызывается в случае, когда пользователь пытается удалить не своего гостя."""
+    pass
