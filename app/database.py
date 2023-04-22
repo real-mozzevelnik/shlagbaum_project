@@ -338,7 +338,7 @@ class Database():
             self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, 
                                 password, car_num, place, car_type, active) 
                                 VALUES('{name}', '{lastname}', '{phone}', '{hpsw}', 
-                                '{car_num}'), '{place}', '{car_type}', '{1}'""")
+                                '{car_num}', '{int(place)}', '{car_type}', '{1}')""")
             self.__db.commit()
 
             # Возвращаем пароль.

@@ -5,7 +5,7 @@ def generate_password():
     password = ''
     for i in range(7):
         password = password + str(randint(0, 9))
-        password = password + ascii_letters[randint(0, len(ascii_letters))]
+        password = password + ascii_letters[randint(0, len(ascii_letters)-1)]
     password = list(password)
     shuffle(password)
     
