@@ -124,18 +124,18 @@ class Database():
             return {'error' : 'Аккаунт заблокирован администратором.'}
         
 
-    # Метод для изменения данных о пользователе в бд.
-    def update_user(self, token, changes):
+    # Метод для изменения номера пользователя.
+    def update_phone(self, token, new_phone):
         try:
             # Декодируем токен.
             user_data = decode_token(token)
 
             # Заменяем первую восьмерку в номере телефона на +7.
-            if changes['phone'][0] == '8':
-                changes['phone'] = changes['phone'].replace('8', '+7', 1)
+            if new_phone[0] == '8':
+                new_phone = new_phone.replace('8', '+7', 1)
             # Проверяем, валиден ли номер телефона.
             # Если нет - возвращаем ошибку, обрабатывая исключение NumberParseException.
-            s = parse(changes['phone'])
+            s = parse(new_phone)
             if not is_valid_number(s):
                 raise NumberParseException(0, 'Not valid ph')
             
@@ -143,22 +143,21 @@ class Database():
             # не зарегестрирован ли уже этот номер телефона.
             self.__cur.execute(f"SELECT phone FROM Users where user_id = '{user_data['user_id']}'")
             res = self.__cur.fetchone()
-            if res['phone'] != changes['phone']:
+            if res['phone'] != new_phone:
             
                 # Проверяем, существует ли уже юзер с таким номером телефона.
-                self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{changes['phone']}'")
+                self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{new_phone}'")
                 res = self.__cur.fetchone()
                 if res['count'] > 0:
                     raise UserAlreadyExistsException
             
             # Обновлем данные.
-            self.__cur.execute(f"""UPDATE Users SET name = '{changes['name']}', 
-            lastname = '{changes['lastname']}', car_num = '{changes['car_num']}', 
-            phone = {changes['phone']} WHERE user_id = '{user_data["user_id"]}'""")
+            self.__cur.execute(f"""UPDATE Users SET phone = '{new_phone}'""")
             self.__db.commit()
 
             # Возвращаем новые данные в токене.
-            access_token = generate_token(user_data['user_id'], changes['phone'], changes['name'], changes['lastname'], changes['car_num'])
+            access_token = generate_token(user_data['user_id'], new_phone, user_data['name'], 
+                                          user_data['last_name'], user_data['car_num'], user_data['place'], user_data['car_type'])
 
             return {"token" : access_token}
 

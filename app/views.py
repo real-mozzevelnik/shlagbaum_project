@@ -59,11 +59,11 @@ def add_guest():
     return jsonify(res)
 
 
-# Изменения информации и пользователе.
-@app.route("/change_user", methods = ["POST"])
+# Изменения номера телефона пользователя.
+@app.route("/change_phone", methods = ["POST"])
 def change_user():
     content = request.json
-    res = dbase.update_user(content["token"], content["changes"])
+    res = dbase.update_phone(content["token"], content["phone"])
 
     return jsonify(res)
 
