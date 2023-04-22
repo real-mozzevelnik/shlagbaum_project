@@ -99,8 +99,8 @@ class Database():
             visits = 2 if one_time_visit else -1
 
             # Добавляем данные в бд.
-            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id, visits_available, car_type, active) 
-                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}', '{visits}', '{car_type}', '{1}')""")
+            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id, visits_available, car_type, active, location) 
+                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}', '{visits}', '{car_type}', '{1}', '{0}')""")
             self.__db.commit()
 
             self.__cur.execute(f"""SELECT guest_id FROM Guests WHERE car_num = '{car_num}'""")
@@ -239,9 +239,12 @@ class Database():
             
             # Обновлем данные.
             self.__cur.execute(f"""UPDATE Guests SET guest_name = '{changes['guest_name']}', 
-                car_num = '{changes['car_num']}', visits_available = '{visits}' 
+                car_num = '{changes['car_num']}', visits_available = '{visits}', car_type = '{changes['car_type']}'
                 WHERE guest_id = '{guest_id}'""")
             self.__db.commit()
+
+            # Логируем изменение информации.
+            self.logger.log(f"""Пользователь {user_data['name'] + ' ' + user_data['last_name']}, {user_data['phone']}, участок номер {user_data['place']}: \nИзменил гостя, новая информация о госте: {changes['guest_name']} номер машины {changes['car_num']}, тип транспорта {changes['car_type']}""")
 
             return {'guest_id' : guest_id}
 
@@ -266,6 +269,9 @@ class Database():
             # Если ничего не найдено - выбрасываем ошибку.
             if not res:
                 raise UserDoesntExistsExceptoin
+            
+            self.check_user_ban(user_data['user_id'])
+
             return {}
         
         except sqlite3.Error:
@@ -274,6 +280,8 @@ class Database():
             return {'error' : 'Не валидный токен.'}
         except UserDoesntExistsExceptoin:
             return {'error' : 'Пользователь не зерегистрирован.'}
+        except BannedUserException:
+            return {'error' : 'Аккаунт заблокирован администратором.'}
         
 
     # Метод для изменения пароля пользователя.
@@ -308,7 +316,7 @@ class Database():
             user_data = decode_token(token)
             # Вытаскиваем всю информацию из бд.
             self.__cur.execute(f"""SELECT guest_id, guest_name, Guests.car_num, 
-                               visits_available FROM Guests INNER JOIN Users ON Users.user_id = Guests.user_id 
+                               visits_available, Guests.car_type FROM Guests INNER JOIN Users ON Users.user_id = Guests.user_id 
                                WHERE Users.user_id = '{user_data['user_id']}'""")
             res = self.__cur.fetchall()
 
@@ -318,7 +326,8 @@ class Database():
             for i, _ in enumerate(res):
                 tmp = list(res[i])
                 one_time_visit = True if tmp[3] > 0 else False
-                tmp_dict = {'guest_id' : tmp[0], 'guest_name' : tmp[1], 'car_num' : tmp[2], "one_time_visit" : one_time_visit}
+                tmp_dict = {'guest_id' : tmp[0], 'guest_name' : tmp[1], 'car_num' : tmp[2], 
+                            "one_time_visit" : one_time_visit, "car_type" : tmp[4]}
 
                 guests_to_send.append(tmp_dict)
 
@@ -361,9 +370,9 @@ class Database():
             
             # Создаем нового юзера в базе данных.
             self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, 
-                                password, car_num, place, car_type, active) 
+                                password, car_num, place, car_type, active, location) 
                                 VALUES('{name}', '{lastname}', '{phone}', '{hpsw}', 
-                                '{car_num}', '{int(place)}', '{car_type}', '{1}')""")
+                                '{car_num}', '{int(place)}', '{car_type}', '{1}', '{0}')""")
             self.__db.commit()
 
             # Возвращаем пароль.

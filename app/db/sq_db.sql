@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS Users (
     car_num text NOT NULL,
     place integer NOT NULL,
     car_type text NOT NULL,
-    active integer NOT NULL
+    active integer NOT NULL,
+    location integer NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Guests (
@@ -18,5 +19,6 @@ CREATE TABLE IF NOT EXISTS Guests (
     visits_available integer NOT NULL,
     car_type text NOT NULL,
     active char NOT NULL,
+    location integer NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users (user_id)
 );
