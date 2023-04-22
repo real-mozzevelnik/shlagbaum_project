@@ -4,7 +4,7 @@ from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
 from app.password import generate_password
-from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException, NotYourCarException, NotYourGuestException
+from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException, NotYourCarException, NotYourGuestException, BannedUserException
 
 # Класс для взаимодействия с базой данных.
 class Database():
@@ -49,15 +49,22 @@ class Database():
                 raise UserDoesntExistsExceptoin
             
             # Получаем данные из бд.
-            self.__cur.execute(f"SELECT user_id, name, lastname, car_num, password FROM Users WHERE phone = '{phone}'")
+            self.__cur.execute(f"SELECT * FROM Users WHERE phone = '{phone}'")
             res = self.__cur.fetchone()
 
-            # Проверяем пароль и возвращаем данные в токене.
-            access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], res['car_num'])
-            if check_password_hash(res['password'], password):
-                return {'token' : access_token} 
-            else:
+            # Проверяем пароль.
+            if not check_password_hash(res['password'], password):
                 raise WrongPasswordException
+            
+            # Проверка, забанен ли пользователь.
+            if not res['active']:
+                raise BannedUserException
+
+            # Возвращаем данные в токене.
+            access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], 
+                                        res['car_num'], res['place'], res['car_type'])
+
+            return {'token' : access_token}
 
         except NumberParseException:
             return {'error' : 'Не валидный номер телефона.'}
@@ -67,6 +74,8 @@ class Database():
             return {'error' : 'Аккаунта не существует.'}
         except WrongPasswordException:
             return {'error' : 'Неверный пароль.'}
+        except BannedUserException:
+            return {'error' : 'Аккаунт заблокирован администратором.'}
         
     
     # Метод для добавления гостя.

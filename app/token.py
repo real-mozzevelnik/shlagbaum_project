@@ -1,14 +1,14 @@
 from app import app
 import jwt
-from datetime import datetime, timedelta
 from app.exceptions import InvalidTokenException
 
 
 # Создаем jwt токен, в котором будут храниться:
 # user_id, phone, name, lastname, car_num, exp.
-def generate_token(user_id, phone, name, last_name, car_num):
+def generate_token(user_id, phone, name, last_name, car_num, place, car_type):
     token = jwt.encode({"user_id" : user_id, "phone" : phone,
-    "name" : name, "last_name" : last_name, "car_num" : car_num, "exp": datetime.utcnow() + timedelta(days=30)}, 
+    "name" : name, "last_name" : last_name, "car_num" : car_num,
+    "place" : place, "car_type" : car_type}, 
     app.config['SECRET_KEY'], algorithm = "HS256")
     return token
 

@@ -33,3 +33,7 @@ class NotYourCarException(Exception):
 class NotYourGuestException(Exception):
     """Вызывается в случае, когда пользователь пытается удалить не своего гостя."""
     pass
+
+
+class BannedUserException(Exception):
+    """Вызывается при попытке входа в случае, если пользователь заблокирован."""
