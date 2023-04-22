@@ -38,22 +38,13 @@ def close_db(error):
 
 
 
+# ! ПРИЛОЖЕНИЕ ПОЛЬЗОВАТЕЛЯ
+
 # Вход пользователя.
 @app.route('/login', methods = ["POST"])
 def login():
     content = request.json
     res = dbase.retrieve_user(content['phone'] ,content['password'])
-
-    return jsonify(res)
-
-
-# Регистрация пользователя.
-@app.route('/registr', methods = ["POST"])
-def registr():
-    content = request.json
-    hash = generate_password_hash(content['password'])
-    res = dbase.create_user(content['phone'], hash, 
-                                content['name'], content['lastname'], content['car_num'])
 
     return jsonify(res)
 
@@ -136,3 +127,18 @@ def get_guests():
 def call():
     content = request.json
     return 1
+
+
+
+# ! ПРИЛОЖЕНИЕ АДМИНА.  
+
+
+# Регистрация пользователя.
+@app.route('/registr', methods = ["POST"])
+def registr():
+    content = request.json
+    res = dbase.create_user(content['phone'], 
+                                content['name'], content['lastname'], content['car_num'],
+                                content['place'], content['car_type'])
+
+    return jsonify(res)

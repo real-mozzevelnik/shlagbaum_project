@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS Users (
     lastname text NOT NULL,
     phone text NOT NULL,
     password text NOT NULL,
-    car_num text NOT NULL
+    car_num text NOT NULL,
+    place integer NOT NULL,
+    car_type text NOT NULL,
+    active integer NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Guests (
@@ -13,5 +16,7 @@ CREATE TABLE IF NOT EXISTS Guests (
     guest_name text NOT NULL,
     car_num text NOT NULL,
     visits_available integer NOT NULL,
+    car_type text NOT NULL,
+    active char NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users (user_id)
 );

@@ -1,8 +1,9 @@
 import sqlite3
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
+from app.password import generate_password
 from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException, NotYourCarException, NotYourGuestException
 
 # Класс для взаимодействия с базой данных.
@@ -10,6 +11,9 @@ class Database():
     def __init__(self, db):
         self.__db = db
         self.__cur = db.cursor()
+
+
+    # !  ПРИЛОЖЕНИЕ ЮЗЕРА.
 
 
     # Метод для проверки наличия номера машины гостя в бд.
@@ -23,46 +27,6 @@ class Database():
         # Если нашлось авто с таким номером - возвращаем ошибку.
         if res['count'] or res2['count']:
             raise CarNumAlreadyExistsException
-
-
-    # Метод для создания аккаунта пользователя.
-    # Проверяет, существует ли уже пользователь с данным номером телефона.
-    # Пароли хранятся в базе данных в виде хэша.
-    # Возвращает jwt токен.
-    def create_user(self, phone, hpsw, name, lastname, car_num):
-        try:
-            # Заменяем первую восьмерку в номере телефона на +7.
-            if phone[0] == '8':
-                phone = phone.replace('8', '+7', 1)
-            # Проверяем, валиден ли номер телефона.
-            # Если нет - возвращаем ошибку, обрабатывая исключение NumberParseException.
-            s = parse(phone)
-            if not is_valid_number(s):
-                raise NumberParseException(0, 'Not valid ph')
-            # Проверяем, существует ли уже юзер с таким номером телефона.
-            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
-            res = self.__cur.fetchone()
-            if res['count'] > 0:
-                raise UserAlreadyExistsException
-            
-            # Создаем нового юзера в базе данных.
-            self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, password, car_num) 
-                               VALUES('{name}', '{lastname}', '{phone}', '{hpsw}', '{car_num}')""")
-            self.__db.commit()
-
-            # Запрашиваем в дб id юзера, чтобы добавить его в токен.
-            self.__cur.execute(f"SELECT user_id FROM Users WHERE phone = '{phone}'")
-            res = self.__cur.fetchone()
-            access_token = generate_token(res['user_id'], phone, name, lastname, car_num)
-            return {'token' : access_token}
-
-        # Обрабатываем возможные исключения.
-        except NumberParseException:
-            return {'error' : 'Не валидный номер телефона.'}
-        except sqlite3.Error:
-            return {'error' : 'DataBase Error'}
-        except UserAlreadyExistsException:
-            return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
 
 
     # Метод для входа в аккаунт.
@@ -341,4 +305,49 @@ class Database():
             return {'error' : 'Не валидный токен.'}
 
     
+    # ! ПРИЛОЖЕНИЕ АДМИНА.
+
     
+    # Метод для создания аккаунта пользователя.
+    # Аккаунт создается в приложении админа.
+    # Проверяет, существует ли уже пользователь с данным номером телефона.
+    # Пароли хранятся в базе данных в виде хэша.
+    # Возвращает пароль для юзера.
+    def create_user(self, phone, name, lastname, car_num, place, car_type):
+        try:
+            # Заменяем первую восьмерку в номере телефона на +7.
+            if phone[0] == '8':
+                phone = phone.replace('8', '+7', 1)
+            # Проверяем, валиден ли номер телефона.
+            # Если нет - возвращаем ошибку, обрабатывая исключение NumberParseException.
+            s = parse(phone)
+            if not is_valid_number(s):
+                raise NumberParseException(0, 'Not valid ph')
+            # Проверяем, существует ли уже юзер с таким номером телефона.
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Users WHERE phone = '{phone}'")
+            res = self.__cur.fetchone()
+            if res['count'] > 0:
+                raise UserAlreadyExistsException
+            
+            # Генерируем пароль для пользователя.
+            password = generate_password()
+            # Генерируем хэш пароля для хранения в бд.
+            hpsw = generate_password_hash(password)
+            
+            # Создаем нового юзера в базе данных.
+            self.__cur.execute(f"""INSERT INTO Users (name, lastname, phone, 
+                                password, car_num, place, car_type, active) 
+                                VALUES('{name}', '{lastname}', '{phone}', '{hpsw}', 
+                                '{car_num}'), '{place}', '{car_type}', '{1}'""")
+            self.__db.commit()
+
+            # Возвращаем пароль.
+            return {'password' : password}
+
+        # Обрабатываем возможные исключения.
+        except NumberParseException:
+            return {'error' : 'Не валидный номер телефона.'}
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except UserAlreadyExistsException:
+            return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
