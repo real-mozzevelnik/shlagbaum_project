@@ -18,6 +18,14 @@ class Database():
     # !  ПРИЛОЖЕНИЕ ЮЗЕРА.
 
 
+    def check_user_ban(self, user_id):
+        self.__cur.execute(f"""SELECT active FROM Users 
+                                WHERE user_id = '{user_id}'""")
+        act_res = self.__cur.fetchone()
+        if not act_res['active']:
+            raise BannedUserException
+
+
     # Метод для проверки наличия номера машины гостя в бд.
     def check_guest_car_num(self, car_num):
         # Проверяем наличие номера авто в таблице гостей.
@@ -59,8 +67,7 @@ class Database():
                 raise WrongPasswordException
             
             # Проверка, забанен ли пользователь.
-            if not res['active']:
-                raise BannedUserException
+            self.check_user_ban(res['user_id'])
 
             # Возвращаем данные в токене.
             access_token = generate_token(res['user_id'], phone, res['name'], res['lastname'], 
@@ -100,11 +107,7 @@ class Database():
             res = self.__cur.fetchone()
 
             # Проверяем, забанен ли пользователь.
-            self.__cur.execute(f"""SELECT active FROM Users 
-                                WHERE user_id = '{user_data['user_id']}'""")
-            act_res = self.__cur.fetchone()
-            if not act_res['active']:
-                raise BannedUserException
+            self.check_user_ban(user_data['user_id'])
             
             # Логируем добавление гостя.
             self.logger.log(f"""Пользователь {user_data['name'] + ' ' + user_data['last_name']}, {user_data['phone']}, участок номер {user_data['place']}: \nДобавил гостя {guest_name}, номер машины {car_num}, тип транспорта {car_type}""")
