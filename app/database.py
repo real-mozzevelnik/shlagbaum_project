@@ -4,6 +4,7 @@ from phonenumbers import is_valid_number, parse, NumberParseException
 
 from app.token import generate_token, decode_token
 from app.password import generate_password
+from app.logger import Logger
 from app.exceptions import InvalidTokenException, CarNumAlreadyExistsException, UserAlreadyExistsException, UserDoesntExistsExceptoin, WrongPasswordException, NotYourCarException, NotYourGuestException, BannedUserException
 
 # Класс для взаимодействия с базой данных.
@@ -11,6 +12,7 @@ class Database():
     def __init__(self, db):
         self.__db = db
         self.__cur = db.cursor()
+        self.logger = Logger()
 
 
     # !  ПРИЛОЖЕНИЕ ЮЗЕРА.
@@ -79,7 +81,7 @@ class Database():
         
     
     # Метод для добавления гостя.
-    def create_guest(self, token, guest_name, car_num, one_time_visit):
+    def create_guest(self, token, guest_name, car_num, one_time_visit, car_type):
         try:
             # Пытаемся декодировать токен.
             user_data = decode_token(token)
@@ -90,12 +92,22 @@ class Database():
             visits = 2 if one_time_visit else -1
 
             # Добавляем данные в бд.
-            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id, visits_available) 
-                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}', '{visits}')""")
+            self.__cur.execute(f"""INSERT INTO Guests (guest_name, car_num, user_id, visits_available, car_type, active) 
+                               VALUES('{guest_name}', '{car_num}', '{user_data['user_id']}', '{visits}', '{car_type}', '{1}')""")
             self.__db.commit()
 
             self.__cur.execute(f"""SELECT guest_id FROM Guests WHERE car_num = '{car_num}'""")
             res = self.__cur.fetchone()
+
+            # Проверяем, забанен ли пользователь.
+            self.__cur.execute(f"""SELECT active FROM Users 
+                                WHERE user_id = '{user_data['user_id']}'""")
+            act_res = self.__cur.fetchone()
+            if not act_res['active']:
+                raise BannedUserException
+            
+            # Логируем добавление гостя.
+            self.logger.log(f"""Пользователь {user_data['name'] + ' ' + user_data['last_name']}, {user_data['phone']}, участок номер {user_data['place']}: \nДобавил гостя {guest_name}, номер машины {car_num}, тип транспорта {car_type}""")
 
             return {'guest_id' : res['guest_id']}
             
@@ -105,6 +117,8 @@ class Database():
             return {'error' : 'Не валидный токен'}
         except CarNumAlreadyExistsException:
             return {'error' : 'Авто уже зарегистрировано.'}
+        except BannedUserException:
+            return {'error' : 'Аккаунт заблокирован администратором.'}
         
 
     # Метод для изменения данных о пользователе в бд.

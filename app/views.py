@@ -54,7 +54,7 @@ def login():
 def add_guest():
     content = request.json
     res = dbase.create_guest(content['token'], content['guest_name'], 
-                             content['car_num'], content['one_time_visit'])
+                             content['car_num'], content['one_time_visit'], content['car_type'])
 
     return jsonify(res)
 
