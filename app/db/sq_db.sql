@@ -22,3 +22,8 @@ CREATE TABLE IF NOT EXISTS Guests (
     location integer NOT NULL,
     FOREIGN KEY (user_id) REFERENCES Users (user_id)
 );
+
+CREATE TABLE IF NOT EXISTS Admins (
+    admin_id integer PRIMARY KEY AUTOINCREMENT,
+    password text NOT NULL
+);

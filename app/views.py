@@ -142,3 +142,57 @@ def registr():
                                 content['place'], content['car_type'])
 
     return jsonify(res)
+
+
+# Вход админа.
+@app.route('/admin_login', methods = ["POST"])
+def admin_login():
+    content = request.json
+    res = dbase.retrieve_admin(content['password'])
+
+    return jsonify(res)
+
+
+# Получение логов.
+@app.route('/get_logs', methods = ["POST"])
+def get_logs():
+    content = request.json
+    res = dbase.retrieve_logs(content['token'])
+
+    return jsonify(res)
+
+
+# Получение всех пользователей.
+@app.route('/get_users', methods = ["POST"])
+def get_users():
+    content = request.json
+    res = dbase.admin_retrieve_users(content['token'])
+
+    return jsonify(res)
+
+
+# Получение гостей пользователя.
+@app.route('/get_guests_admin', methods = ["POST"])
+def get_guests_admin():
+    content = request.json
+    res = dbase.admin_retrieve_guests(content['token'], content['user_id'])
+
+    return jsonify(res)
+
+
+# Бан пользователя.
+@app.route('/ban_user', methods = ["POST"])
+def ban_user():
+    content = request.json
+    res = dbase.change_user_active(content['token'], content['user_id'], content['act'])
+
+    return jsonify(res)
+
+
+# Бан гостя.
+@app.route('/ban_guest', methods = ["POST"])
+def ban_guest():
+    content = request.json
+    res = dbase.change_guest_active(content['token'], content['guest_id'], content['act'])
+
+    return jsonify(res)

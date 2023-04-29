@@ -316,7 +316,7 @@ class Database():
             user_data = decode_token(token)
             # Вытаскиваем всю информацию из бд.
             self.__cur.execute(f"""SELECT guest_id, guest_name, Guests.car_num, 
-                               visits_available, Guests.car_type FROM Guests INNER JOIN Users ON Users.user_id = Guests.user_id 
+                               visits_available, Guests.car_type, Guests.active FROM Guests INNER JOIN Users ON Users.user_id = Guests.user_id 
                                WHERE Users.user_id = '{user_data['user_id']}'""")
             res = self.__cur.fetchall()
 
@@ -327,7 +327,7 @@ class Database():
                 tmp = list(res[i])
                 one_time_visit = True if tmp[3] > 0 else False
                 tmp_dict = {'guest_id' : tmp[0], 'guest_name' : tmp[1], 'car_num' : tmp[2], 
-                            "one_time_visit" : one_time_visit, "car_type" : tmp[4]}
+                            "one_time_visit" : one_time_visit, "car_type" : tmp[4], "active" : tmp[5]}
 
                 guests_to_send.append(tmp_dict)
 
@@ -385,3 +385,148 @@ class Database():
             return {'error' : 'DataBase Error'}
         except UserAlreadyExistsException:
             return {'error' : 'Пользователь с таким номером телефона уже зарегистрирован.'}
+        
+
+    # Вход для админа.
+    def retrieve_admin(self, password):
+        try:
+            # Проверяем, существует ли админ с таким паролем.
+            self.__cur.execute(f"SELECT COUNT() as 'count' FROM Admins WHERE password = '{password}'")
+            res = self.__cur.fetchone()
+            if res['count'] != 1:
+                raise WrongPasswordException
+            # Возвращаем токен.
+            access_token = generate_token(None, None, "Admin", "Admin", None, None, None)
+
+            return {'token' : access_token}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except WrongPasswordException:
+            return {'error' : 'Неверный пароль.'}
+        
+    
+    # Получение логов. 
+    def retrieve_logs(self, token):
+        try:
+            # Проверяем токен админа.
+            decode_token(token)
+            # Получаем логи.
+            logs = self.logger.get_log()
+            return {'logs' : logs}
+        
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
+        
+
+    # Получение всех пользователей.
+    def admin_retrieve_users(self, token):
+        try:
+            # Проверяем токен админа.
+            decode_token(token)
+            # Забираем из бд всех пользователей.
+            self.__cur.execute("""SELECT * from Users""")
+            res = self.__cur.fetchall()
+
+            # Формируем массив с пользователями.
+            users_to_send = []
+
+            for i, _ in enumerate(res):
+                tmp = list(res[i])
+                tmp_dict = {"user_id" : tmp[0], "name" : tmp[1], "lastname" : tmp[2],
+                            "phone" : tmp[3], "car_num" : tmp[5], "place" : tmp[6],
+                            "car_type" : tmp[7], "active" : tmp[8], "location" : tmp[9]}
+                users_to_send.append(tmp_dict)
+
+            return {"users" : users_to_send}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
+        
+
+    # Получение гостей админом.
+    def admin_retrieve_guests(self, token, user_id):
+        try:
+            # Проверяем токен админа.
+            decode_token(token)
+
+            # Получаем гостей из бд.
+            self.__cur.execute(f"""SELECT * FROM Guests WHERE user_id = '{user_id}'""")
+            res = self.__cur.fetchall()
+
+            # Упаковываем каждого гостя в более удобную структуру.
+            guests_to_send = []
+
+            for i, _ in enumerate(res):
+                tmp = list(res[i])
+                one_time_visit = True if tmp[4] > 0 else False
+                tmp_dict = {'guest_id' : tmp[0], 'guest_name' : tmp[2], 'car_num' : tmp[3], 
+                            "one_time_visit" : one_time_visit, "car_type" : tmp[5], "active" : tmp[6], "location" : tmp[7]}
+
+                guests_to_send.append(tmp_dict)
+
+            return {'guests' : guests_to_send}
+
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
+        
+
+    # Изменение активности пользователя.
+    def change_user_active(self, token, user_id, act):
+        try:
+            # Проверяем токен админа.
+            decode_token(token)
+
+            # В зависимости от дейтсвия меняем активность пользователя.
+            if act == 'ban':
+                active = 0
+            else:
+                active = 1
+
+            # Записываем изменение в бд.
+            self.__cur.execute(f"""UPDATE Users SET active = '{active}' WHERE user_id = '{user_id}'""")
+            self.__db.commit()
+            # Удаляем всех гостей пользователя.
+            self.__cur.execute(f"""DELETE FROM Guests WHERE user_id = '{user_id}'""")
+            self.__db.commit()
+
+            return {}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}
+        
+
+    # Изменение активности гостя.
+    def change_guest_active(self, token, guest_id, act):
+        try:
+            # Проверяем токен админа.
+            decode_token(token)
+
+            # В зависимости от дейтсвия меняем активность пользователя.
+            if act == 'ban':
+                active = 0
+            else:
+                active = 1
+
+            # Записываем изменение в бд.
+            self.__cur.execute(f"""UPDATE Guests SET active = '{active}' WHERE guest_id = '{guest_id}'""")
+            self.__db.commit()
+
+            return {}
+
+        except sqlite3.Error:
+            return {'error' : 'DataBase Error'}
+        except InvalidTokenException:
+            return {'error' : 'Не валидный токен.'}      
+
+
+
+
+        
