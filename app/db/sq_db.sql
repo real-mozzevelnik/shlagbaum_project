@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS Users (
     car_num text NOT NULL,
     place integer NOT NULL,
     car_type text NOT NULL,
-    active integer NOT NULL,
+    active char NOT NULL,
     location integer NOT NULL
 );
 

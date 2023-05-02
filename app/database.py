@@ -22,7 +22,7 @@ class Database():
         self.__cur.execute(f"""SELECT active FROM Users 
                                 WHERE user_id = '{user_id}'""")
         act_res = self.__cur.fetchone()
-        if not act_res['active']:
+        if not int(act_res['active']):
             raise BannedUserException
 
 
@@ -92,6 +92,10 @@ class Database():
         try:
             # Пытаемся декодировать токен.
             user_data = decode_token(token)
+
+            # Проверяем, забанен ли пользователь.
+            self.check_user_ban(user_data['user_id'])
+            
             
             # Проверяем, не существует ли уже номер авто в бд.
             self.check_guest_car_num(car_num)
@@ -106,9 +110,6 @@ class Database():
             self.__cur.execute(f"""SELECT guest_id FROM Guests WHERE car_num = '{car_num}'""")
             res = self.__cur.fetchone()
 
-            # Проверяем, забанен ли пользователь.
-            self.check_user_ban(user_data['user_id'])
-            
             # Логируем добавление гостя.
             self.logger.log(f"""Пользователь {user_data['name'] + ' ' + user_data['last_name']}, {user_data['phone']}, участок номер {user_data['place']}: \nДобавил гостя {guest_name}, номер машины {car_num}, тип транспорта {car_type}""")
 
@@ -295,6 +296,7 @@ class Database():
             if not check_password_hash(res['password'], old_psw):
                 raise WrongPasswordException
             
+            new_psw = generate_password_hash(new_psw)
             # Изменяем данные.
             self.__cur.execute(f"UPDATE Users SET password = '{new_psw}' WHERE user_id = '{user_data['user_id']}'")
             self.__db.commit()
